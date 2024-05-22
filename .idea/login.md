@@ -1,7 +1,6 @@
 # 
 
-password123test
-
-1. MD5 password
-d22a7798a4de335e483ef36d119702c8
-2. 
+1. get random code
+2. md5 password
+3. append code to md5 password
+4. sha256 the resulting string

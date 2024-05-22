@@ -6,12 +6,10 @@ type RandomCodeReq struct {
 }
 
 type RandomCodeResp struct {
-	ErrorCode *string `json:"errorCode"`
-	ErrorMsg  *string `json:"errorMsg"`
-
-	Success    bool   `json:"success"`
 	RandomCode string `json:"randomCode"`
 	Timestamp  int64  `json:"timestamp"`
+
+	Meta
 }
 
 type LoginReq struct {
@@ -26,9 +24,7 @@ type LoginReq struct {
 }
 
 type LoginResp struct {
-	ErrorCode *string `json:"errorCode"`
-	ErrorMsg  *string `json:"errorMsg"`
+	Token string `json:"token"`
 
-	Success bool   `json:"success"`
-	Token   string `json:"token"`
+	Meta
 }

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/dylanmazurek/supernote-sync/pkg/supernote/constants"
 	"github.com/dylanmazurek/supernote-sync/pkg/supernote/models"
@@ -38,33 +37,27 @@ type addAuthHeaderTransport struct {
 }
 
 func (adt *addAuthHeaderTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", adt.Session.GetToken()))
+	req.Header.Add("X-Access-Token", adt.Session.GetToken())
 	req.Header.Add("User-Agent", constants.REPO_URL)
 
 	return adt.T.RoundTrip(req)
 }
 
 func (c *AuthClient) InitTransportSession() (*http.Client, error) {
-	randomCode, err := c.GetCode()
+	c.session = models.Session{}
+	c.session.SetCredentials(c.opts.username, c.opts.password)
+
+	err := c.RefreshSession()
 	if err != nil {
 		return nil, err
 	}
-
-	log.Info().Msgf("random code: %s", *randomCode)
-
-	token, err := c.RefreshSession()
-	if err != nil {
-		return nil, err
-	}
-
-	log.Info().Msgf("token: %s", *token)
 
 	authTransport, err := c.createAuthTransport()
 
 	return authTransport, err
 }
 
-func (c *AuthClient) GetCode() (*string, error) {
+func (c *AuthClient) UpdateRandomCode() error {
 	codeUrl := fmt.Sprintf("%s%s", constants.API_BASE_URL, constants.API_USER_RANDOM_CODE)
 
 	var reqBody models.RandomCodeReq
@@ -73,13 +66,13 @@ func (c *AuthClient) GetCode() (*string, error) {
 
 	reqBodyJson, err := json.Marshal(reqBody)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	req, err := http.NewRequest(http.MethodPost, codeUrl, bytes.NewBuffer(reqBodyJson))
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	req.Header.Add("User-Agent", constants.REPO_URL)
@@ -89,29 +82,38 @@ func (c *AuthClient) GetCode() (*string, error) {
 
 	resp, err := c.internalClient.Do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("failed to get code")
+		return errors.New("failed to get code")
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var respJson models.RandomCodeResp
 	err = json.Unmarshal(body, &respJson)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &respJson.RandomCode, nil
+	c.session.SetMetadata(respJson.RandomCode, respJson.Timestamp)
+
+	log.Debug().Str("random_code", respJson.RandomCode).Int64("timestamp", respJson.Timestamp).Msg("metadata refreshed")
+
+	return nil
 }
 
-func (c *AuthClient) RefreshSession() (*string, error) {
+func (c *AuthClient) RefreshSession() error {
+	err := c.UpdateRandomCode()
+	if err != nil {
+		return err
+	}
+
 	codeUrl := fmt.Sprintf("%s%s", constants.API_BASE_URL, constants.API_USER_LOGIN)
 
 	var reqBody models.LoginReq
@@ -121,18 +123,20 @@ func (c *AuthClient) RefreshSession() (*string, error) {
 	reqBody.Equipment = "1"
 	reqBody.LoginMethod = "1"
 	reqBody.Language = "en"
-	reqBody.Password = c.opts.password
-	reqBody.Timestamp = time.Now().Unix()
+
+	password, timestamp := c.session.GetMetadata()
+	reqBody.Password = password
+	reqBody.Timestamp = timestamp
 
 	reqBodyJson, err := json.Marshal(reqBody)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	req, err := http.NewRequest(http.MethodPost, codeUrl, bytes.NewBuffer(reqBodyJson))
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	req.Header.Add("User-Agent", constants.REPO_URL)
@@ -142,26 +146,30 @@ func (c *AuthClient) RefreshSession() (*string, error) {
 
 	resp, err := c.internalClient.Do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("failed to get code")
+		return errors.New("failed to refresh session")
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var respJson models.LoginResp
 	err = json.Unmarshal(body, &respJson)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &respJson.Token, nil
+	c.session.SetToken(respJson.Token)
+
+	log.Debug().Msg("session refreshed")
+
+	return nil
 }
 
 func (c *AuthClient) createAuthTransport() (*http.Client, error) {

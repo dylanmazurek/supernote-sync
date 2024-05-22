@@ -10,7 +10,16 @@ const (
 )
 
 const (
-	API_USER = "/user/query/token"
+	API_USER_TOKEN = "/user/query/token"
+	API_USER_QUERY = "/user/query"
+)
+
+const (
+	API_EQUIPMENT_BIND_STATUS = "/equipment/bind/status"
+)
+
+const (
+	API_FILE_LIST_QUERY = "/file/list/query"
 )
 
 const (

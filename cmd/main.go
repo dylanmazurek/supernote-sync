@@ -1,44 +1,42 @@
 package main
 
 import (
-	"crypto/md5"
+	"context"
 	"os"
-	"unicode/utf8"
 
 	"github.com/dylanmazurek/supernote-sync/internal/logger"
+	"github.com/dylanmazurek/supernote-sync/pkg/supernote"
 	_ "github.com/joho/godotenv/autoload"
 
+	"github.com/markkurossi/tabulate"
 	"github.com/rs/zerolog/log"
 )
 
 func main() {
-	//ctx := context.Background()
+	ctx := context.Background()
 	log.Logger = logger.New()
 
-	log.Info().Msg("starting supernote-sync")
-
-	//username := os.Getenv("USERNAME")
+	username := os.Getenv("USERNAME")
 	password := os.Getenv("PASSWORD")
 
-	hashedPassword := testPassword(password)
-	log.Info().Msg(hashedPassword)
+	supernoteClient, err := supernote.New(ctx, supernote.WithCredentials(username, password))
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create supernote client")
+	}
 
-	// _, err := supernote.New(ctx, supernote.WithCredentials(username, password))
-	// if err != nil {
-	// 	log.Fatal().Err(err).Msg("failed to create supernote client")
-	// }
+	fileList, err := supernoteClient.GetFileList(999713992811216897, 1, 20)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get user info")
+	}
 
-	// log.Info().Msg("successfully authenticated")
-}
+	tab := tabulate.New(tabulate.Unicode)
+	tab.Header("Key").SetAlign(tabulate.ML)
+	tab.Header("Value")
 
-func testPassword(password string) string {
-	hash := md5.New()
-	hash.Write([]byte(password))
-	hashPassword := string(hash.Sum(nil))
-	log.Info().Msg(hashPassword)
+	err = tabulate.Reflect(tab, 0, nil, fileList)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to print table")
+	}
 
-	r, _ := utf8.DecodeRuneInString(hashPassword)
-	log.Info().Msg(string(r))
-
-	return hashPassword
+	tab.Print(os.Stdout)
 }
