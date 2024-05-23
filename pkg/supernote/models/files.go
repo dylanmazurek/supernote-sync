@@ -5,7 +5,7 @@ import (
 )
 
 type FileListReq struct {
-	DirectoryId int64  `json:"directoryId"`
+	DirectoryId string `json:"directoryId"`
 	PageNo      int    `json:"pageNo"`
 	PageSize    int    `json:"pageSize"`
 	Sequence    string `json:"sequence"`
@@ -49,4 +49,16 @@ func (u *UserFile) UnmarshalJSON(data []byte) error {
 	u.IsFolder = aux.IsFolder == "Y"
 
 	return nil
+}
+
+type FileDownloadReq struct {
+	ID   string `json:"id"`
+	Type int    `json:"type"`
+}
+
+type FileDownloadResp struct {
+	MD5 string `json:"md5"`
+	URL string `json:"url"`
+
+	Meta
 }

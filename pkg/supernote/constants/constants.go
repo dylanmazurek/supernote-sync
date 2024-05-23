@@ -20,6 +20,7 @@ const (
 
 const (
 	API_FILE_LIST_QUERY = "/file/list/query"
+	API_FILE_URL        = "/file/download/url"
 )
 
 const (

@@ -8,7 +8,6 @@ import (
 	"github.com/dylanmazurek/supernote-sync/pkg/supernote"
 	_ "github.com/joho/godotenv/autoload"
 
-	"github.com/markkurossi/tabulate"
 	"github.com/rs/zerolog/log"
 )
 
@@ -24,19 +23,19 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to create supernote client")
 	}
 
-	fileList, err := supernoteClient.GetFileList(999713992811216897, 1, 20)
+	err = supernoteClient.DownloadAllFiles("0", ".files")
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to get user info")
+		log.Fatal().Err(err).Msg("failed to download files")
 	}
 
-	tab := tabulate.New(tabulate.Unicode)
-	tab.Header("Key").SetAlign(tabulate.ML)
-	tab.Header("Value")
+	// tab := tabulate.New(tabulate.Unicode)
+	// tab.Header("Key").SetAlign(tabulate.ML)
+	// tab.Header("Value")
 
-	err = tabulate.Reflect(tab, 0, nil, fileList)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to print table")
-	}
+	// err = tabulate.Reflect(tab, 0, nil, fileList)
+	// if err != nil {
+	// 	log.Fatal().Err(err).Msg("failed to print table")
+	// }
 
-	tab.Print(os.Stdout)
+	// tab.Print(os.Stdout)
 }
