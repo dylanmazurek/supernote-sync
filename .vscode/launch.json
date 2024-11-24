@@ -10,5 +10,15 @@
             "cwd": "${workspaceRoot}",
             "envFile": "${workspaceRoot}/.env"
         },
+        {
+            "name": "debug note decoder",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceRoot}/pkg/noteparser/cmd/main.go",
+            "cwd": "${workspaceRoot}/",
+            "envFile": "${workspaceRoot}/.env",
+            "console": "integratedTerminal"
+        },
     ]
 }

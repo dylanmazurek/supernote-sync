@@ -1,4 +1,4 @@
-package supernote
+package supernotecloud
 
 import (
 	"context"
@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/dylanmazurek/supernote-sync/pkg/supernote/constants"
-	"github.com/dylanmazurek/supernote-sync/pkg/supernote/models"
+	"github.com/dylanmazurek/supernote-sync/pkg/supernote-cloud/constants"
+	"github.com/dylanmazurek/supernote-sync/pkg/supernote-cloud/models"
 	"github.com/rs/zerolog/log"
 )
 

@@ -1,0 +1,3 @@
+package supernotelocal
+
+var ()

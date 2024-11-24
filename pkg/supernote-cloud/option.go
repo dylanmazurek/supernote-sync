@@ -1,4 +1,4 @@
-package supernote
+package supernotecloud
 
 type options struct {
 	username string

@@ -9,7 +9,7 @@ import (
 func New() zerolog.Logger {
 	envLogLevel := os.Getenv("LOG_LEVEL")
 	if envLogLevel == "" {
-		envLogLevel = zerolog.LevelInfoValue
+		envLogLevel = zerolog.LevelTraceValue
 	}
 
 	logLevel, err := zerolog.ParseLevel(envLogLevel)

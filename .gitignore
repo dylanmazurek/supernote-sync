@@ -12,3 +12,6 @@ dist/*
 *.out
 
 __debug*
+
+.idea
+.storage

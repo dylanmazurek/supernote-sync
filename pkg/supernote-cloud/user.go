@@ -1,10 +1,10 @@
-package supernote
+package supernotecloud
 
 import (
 	"net/http"
 
-	"github.com/dylanmazurek/supernote-sync/pkg/supernote/constants"
-	"github.com/dylanmazurek/supernote-sync/pkg/supernote/models"
+	"github.com/dylanmazurek/supernote-sync/pkg/supernote-cloud/constants"
+	"github.com/dylanmazurek/supernote-sync/pkg/supernote-cloud/models"
 )
 
 func (c *Client) GetUserInfo() (*models.UserResp, error) {
