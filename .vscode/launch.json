@@ -20,5 +20,13 @@
             "envFile": "${workspaceRoot}/.env",
             "console": "integratedTerminal"
         },
+        {
+            "name": "debug local",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceRoot}/pkg/supernote-local/cmd/main.go",
+            "envFile": "${workspaceRoot}/.env",
+        },
     ]
 }

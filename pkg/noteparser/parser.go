@@ -28,6 +28,7 @@ const (
 	TControlChars
 
 	TBinary
+	TTail
 )
 
 var tokenKeyNames = map[tokenizer.TokenKey]string{
@@ -56,6 +57,7 @@ var tokenKeyNames = map[tokenizer.TokenKey]string{
 	TControlChars:  "TControlChars",
 
 	TBinary: "TBinary",
+	TTail:   "TTail",
 }
 
 type noteParser struct {
@@ -63,15 +65,24 @@ type noteParser struct {
 }
 
 var (
-	CONTROL_CHAR_NEW_LINE            = "\x01\x00\x00"
-	CONTROL_CHAR_END_OF_LAYERS       = "\x7f\x00\x00\x00"
-	CONTROL_CHAR_END_OF_LAYER_META   = "}\x00\x00\x00"
-	CONTROL_CHAR_END_OF_LAYER_LIST   = "\xef\xbf"
-	CONTROL_CHAR_END_OF_LAYER_LIST_2 = "\xef\xdb"
-	CONTROL_CHAR_END_OF_LAYER_LIST_3 = "\xbd\x04\x00\x00"
-	CONTROL_CHAR_END_OF_LAYER_LIST_4 = "\xef\xbf\x04\x00\x00"
-	CONTROL_CHAR_TAIL_OF_FILE        = "=\x00\x00\x00"
-	CONTROL_CHAR_TAIL_OF_FILE_2      = "\xef\xbf\xbd"
+	CONTROL_CHAR_NEW_LINE_1 = "\x01\x00\x00"
+	CONTROL_CHAR_NEW_LINE_2 = "D\x01\x00\x00"
+	CONTROL_CHAR_NEW_LINE_3 = "\x7f\x00\x00\x00"
+	CONTROL_CHAR_NEW_LINE_4 = "}\x00\x00\x00"
+	CONTROL_CHAR_NEW_LINE_5 = "\x04\x00\x00"
+	CONTROL_CHAR_NEW_LINE_6 = "=\x00\x00\x00"
+	// CONTROL_CHAR_END_OF_LAYER_LIST   = "\xef\xbf"
+	// CONTROL_CHAR_END_OF_LAYER_LIST_2 = "\xef\xdb"
+	// CONTROL_CHAR_END_OF_LAYER_LIST_3 = "\xbd\x04\x00\x00"
+	// CONTROL_CHAR_END_OF_LAYER_LIST_4 = "\xef\xbf\x04\x00\x00"
+	// CONTROL_CHAR_TAIL_OF_FILE_2      = "\xef\xbf\xbd"
+	// CONTROL_CHAR_TAIL_OF_FILE        = "=\x00\x00\x00"
+	// CONTROL_CHAR_FILE_FOOTER         = "\xbd\x00\x00"
+)
+
+var (
+	BINARY_VALUE_1 = "\xef\xbf\xbd"
+	BINARY_END     = "b?"
 )
 
 // NewNoteParser create and configure new tokenizer for Note.
@@ -79,18 +90,22 @@ func NewNoteParser() *noteParser {
 	parser := &noteParser{}
 	parser.tokenizer = tokenizer.New()
 	parser.tokenizer.
+		DefineTokens(TTail, []string{"tail"}).
 		DefineTokens(TControlChars, []string{
-			CONTROL_CHAR_NEW_LINE,
-			CONTROL_CHAR_END_OF_LAYERS,
-			CONTROL_CHAR_END_OF_LAYER_META,
-			CONTROL_CHAR_END_OF_LAYER_LIST,
-			CONTROL_CHAR_END_OF_LAYER_LIST_2,
-			CONTROL_CHAR_END_OF_LAYER_LIST_3,
-			CONTROL_CHAR_END_OF_LAYER_LIST_4,
-			CONTROL_CHAR_TAIL_OF_FILE,
-			CONTROL_CHAR_TAIL_OF_FILE_2,
+			CONTROL_CHAR_NEW_LINE_1,
+			CONTROL_CHAR_NEW_LINE_2,
+			CONTROL_CHAR_NEW_LINE_3,
+			CONTROL_CHAR_NEW_LINE_4,
+			CONTROL_CHAR_NEW_LINE_5,
+			CONTROL_CHAR_NEW_LINE_6,
+			//CONTROL_CHAR_END_OF_FILE,
 		}).
-		DefineTokens(TBinary, []string{"b\xef", "?", "\xbf", "\xbd"}).
+		//DefineTokens(TBinary, []string{"b\xef", "?", "b\xbf", "\xbd"}).
+		DefineTokens(TBinary, []string{
+			BINARY_VALUE_1,
+			BINARY_END,
+		}).
+		DefineTokens(TWhitespace, []string{" ", "\t", "\r", "\n"}).
 		DefineTokens(TColon, []string{":"}).
 		DefineTokens(TArrowOpen, []string{"<"}).
 		DefineTokens(TArrowClose, []string{">"}).
@@ -103,7 +118,11 @@ func NewNoteParser() *noteParser {
 		DefineTokens(TVersionPrefix, []string{"SN_FILE_VER_"})
 
 	parser.tokenizer.AllowKeywordUnderscore()
-	parser.tokenizer.DefineStringToken(TDoubleQuote, `"`, `"`).SetEscapeSymbol(tokenizer.BackSlash)
+
+	parser.tokenizer.
+		DefineStringToken(TDoubleQuote, `"`, `"`) //.
+		//SetEscapeSymbol(tokenizer.BackSlash).
+		//AddSpecialStrings([]string{"t"})
 
 	return parser
 }
@@ -133,6 +152,10 @@ func (parser *noteParser) analyzer(stream *tokenizer.Stream) (*models.Note, erro
 			parseElements(&newNote, stream)
 		} else if stream.CurrentToken().Is(TBinary, tokenizer.TokenKeyword) {
 			printDebug(stream.CurrentToken(), nil)
+			if stream.PrevToken().Is(TTail) {
+				break
+			}
+
 			parseBytes(&newNote, stream)
 		} else {
 			printDebug(stream.CurrentToken(), nil)
@@ -185,23 +208,14 @@ func parseElements(note *models.Note, stream *tokenizer.Stream) error {
 				currentVal = ""
 			}
 
-			stream.GoNext()
-			// } else if stream.CurrentToken().Is(TCurlyOpen, TCurlyClose) {
-			// 	if stream.CurrentToken().Is(TCurlyOpen) {
-			// 		printDebug(stream.CurrentToken())
-			// 	} else {
-			// 		printDebug(stream.CurrentToken())
-			// 	}
+			if stream.CurrentToken().Is(TArrowClose) &&
+				!stream.NextToken().Is(TArrowOpen) {
+				break
+			}
 
-			// 	stream.GoNext()
+			stream.GoNext()
 		} else if stream.CurrentToken().Is(TSquareOpen, TSquareClose) {
 			parseJsonModified(note, stream)
-			// if stream.CurrentToken().Is(TSquareOpen) {
-			// 	printDebug(stream.CurrentToken())
-			// } else {
-			// 	printDebug(stream.CurrentToken())
-			// }
-
 			stream.GoNext()
 		} else if stream.CurrentToken().Is(tokenizer.TokenKeyword, tokenizer.TokenInteger, TComma) {
 			if currentKey == "" {
@@ -217,6 +231,9 @@ func parseElements(note *models.Note, stream *tokenizer.Stream) error {
 			printDebug(stream.CurrentToken(), nil)
 			stream.GoNext()
 		} else if stream.CurrentToken().Is(TControlChars) {
+			printDebug(stream.CurrentToken(), nil)
+			break
+		} else if stream.CurrentToken().Is(TTail) {
 			printDebug(stream.CurrentToken(), nil)
 			break
 		} else if stream.CurrentToken().Is(tokenizer.TokenUndef) {
@@ -239,23 +256,21 @@ func parseBytes(note *models.Note, stream *tokenizer.Stream) error {
 
 	var currentLayer models.Layer
 	for {
-		if stream.CurrentToken().Is(TControlChars) {
+		if stream.CurrentToken().Is(TBinary, tokenizer.TokenKeyword) {
 			printDebug(stream.CurrentToken(), nil)
 
-			layers = append(layers, currentLayer)
-			currentLayer = models.Layer{}
-
-			if string(stream.CurrentToken().Value()) == CONTROL_CHAR_END_OF_LAYERS {
-				printDebug(stream.CurrentToken(), nil)
+			if stream.CurrentToken().ValueString() == BINARY_END {
+				layers = append(layers, currentLayer)
+				currentLayer = models.Layer{}
+				printDebug(stream.CurrentToken(), ptr.String("binary end"))
 				break
 			}
 
-			stream.GoNext()
-			continue
-		} else if stream.CurrentToken().Is(TBinary, tokenizer.TokenKeyword) {
-			printDebug(stream.CurrentToken(), nil)
 			currentLayer.Bytes = append(currentLayer.Bytes, stream.CurrentToken().Value()...)
 			stream.GoNext()
+		} else if stream.CurrentToken().Is(TControlChars) {
+			printDebug(stream.CurrentToken(), ptr.String("parse bytes"))
+			break
 		} else if stream.CurrentToken().Is(tokenizer.TokenUndef) {
 			printDebug(stream.CurrentToken(), ptr.String("parse bytes"))
 			break
@@ -280,7 +295,7 @@ func parseJsonModified(note *models.Note, stream *tokenizer.Stream) error {
 			printDebug(stream.CurrentToken(), nil)
 			stream.GoNext()
 		} else if stream.CurrentToken().Is(tokenizer.TokenUndef) {
-			printDebug(stream.CurrentToken(), nil)
+			printDebug(stream.CurrentToken(), ptr.String("parse json modified"))
 			break
 		} else {
 			printDebug(stream.CurrentToken(), ptr.String("parse json modified"))

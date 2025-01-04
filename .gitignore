@@ -14,3 +14,4 @@ dist/*
 __debug*
 
 .storage
+.idea

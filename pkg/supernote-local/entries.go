@@ -1,29 +1,56 @@
 package supernotelocal
 
 import (
+	"encoding/json"
+	"regexp"
+
+	"github.com/PuerkitoBio/goquery"
 	"github.com/dylanmazurek/supernote-sync/pkg/supernote-local/models"
 )
 
-func (c *Client) GetEntries(path string, depth int) ([]models.Entry, error) {
-	rootEntries, err := c.getEntry(path, depth)
+func (c *Client) ListEntries(path string, depth *int) ([]models.Entry, error) {
+	entries, err := c.getPage(path, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, entry := range rootEntries {
-		if entry.Depth == depth {
-			return []models.Entry{entry}, nil
+	for i, entry := range entries {
+		if depth == nil || entry.Depth == *depth {
+			subEntries, err := c.getPage(entry.Uri, i+1)
+			if err != nil {
+				return nil, err
+			}
+
+			entries = append(entries, subEntries...)
 		}
 	}
 
-	// return device.EntryList, nil
-	return nil, nil
+	return entries, nil
 }
 
-func (c *Client) getEntry(path string, depth int) ([]models.Entry, error) {
-	// if err != nil {
-	// 	return nil, err
-	// }
+func (c *Client) getPage(path string, depth int) ([]models.Entry, error) {
+	req, err := c.NewRequest("GET", path)
+	if err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	var respDoc goquery.Document
+	err = c.Do(req, &respDoc)
+	if err != nil {
+		return nil, err
+	}
+
+	var scriptRegex = regexp.MustCompile(`(?m)const json = '(.*)'$`)
+	respObj := respDoc.Find("script").First().Text()
+	scriptMatches := scriptRegex.FindStringSubmatch(respObj)
+	jsonStr := scriptMatches[1]
+
+	var entries models.EntryList
+	err = json.Unmarshal([]byte(jsonStr), &entries)
+
+	for i, _ := range entries.FileList {
+		entries.FileList[i].Depth = depth
+	}
+
+	return entries.FileList, err
 }
