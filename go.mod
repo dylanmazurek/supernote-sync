@@ -14,7 +14,7 @@ require (
 	github.com/PuerkitoBio/goquery v1.10.0
 	github.com/aws/smithy-go v1.22.1
 	github.com/bzick/tokenizer v1.4.6
-	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/markkurossi/tabulate v0.0.0-20230223130100-d4965869b123
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
